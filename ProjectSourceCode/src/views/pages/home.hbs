@@ -1,0 +1,555 @@
+{{> message}}
+
+<!-- Background video that plays in fullscreen -->
+<video autoplay muted loop playsinline class="bg-video">
+  <source src="/videos/background.mp4" type="video/mp4" />
+  Your browser does not support the video tag.
+</video>
+
+<!-- Page title text overlayed on top of the video -->
+<div class="text-center position-relative z-2 py-5">
+  <h1 class="display-5 fw-bold mb-4 text-glow-green">Welcome to Map Mosaic</h1>
+</div>
+
+<!-- Container for the country search dropdown and 'New Trip' button -->
+<div class="container mb-5 d-flex justify-content-center align-items-center gap-3 flex-wrap">
+  <div class="position-relative d-flex align-items-center" style="min-width: 320px;">
+    <i class="fa-solid fa-magnifying-glass search-icon-inside"></i>
+    <select id="countrySelect" class="form-select select2 styled-search-select ps-5">
+      <option disabled selected value="">🌎 Select a destination...</option>
+    </select>
+  </div>
+
+  <a href="/trips/new" class="btn btn-add-trip d-flex align-items-center px-4 py-2 shadow-sm">
+    <i class="fas fa-plus-circle me-2"></i>New Trip
+  </a>
+</div>
+
+<!-- Map container that will display the globe -->
+<div class="container mb-5">
+  <div id="map" class="globe-container"></div>
+</div>
+
+<!-- External CSS and JS libraries -->
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+
+<style>
+  /* Basic dark theme background and text color */
+  body {
+    background: #0f0f0f;
+    color: #eaeaea;
+  }
+
+  /* Fullscreen blurred background video */
+  .bg-video {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: -1;
+    filter: blur(10px) brightness(0.4);
+    opacity: 0.85;
+    pointer-events: none;
+  }
+
+  /* Glowing green header text */
+  .text-glow-green {
+    color: #eaffea;
+    text-shadow: 0 0 15px rgba(56, 239, 125, 0.6);
+  }
+
+  /* Map container styling */
+  .globe-container {
+    height: 600px;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.05);
+    border: 1px solid #333;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Trip marker styling */
+  .trip-marker {
+    background-size: cover;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    border: 2px solid white;
+    cursor: pointer;
+    will-change: transform;
+  }
+  
+  /* Highlight marker on hover */
+  .trip-marker:hover {
+    border-color: #38ef7d;
+  }
+
+  /* Popup appearnace */
+  .mapboxgl-popup {
+    max-width: 200px !important;
+  }
+
+  .mapboxgl-popup-content {
+    background: rgba(31, 31, 31, 0.95);
+    border-radius: 10px;
+    padding: 12px;
+    color: #eaeaea;
+    border: 1px solid rgba(56, 239, 125, 0.2);
+    font-weight: 600;
+    text-align: center;
+  }
+  
+  /* Close button in popup */
+  .mapboxgl-popup-close-button {
+    color: #fff;
+    font-size: 16px;
+    padding: 4px 8px;
+    background: none;
+    border: none;
+  }
+  
+  .mapboxgl-popup-close-button:hover {
+    color: #38ef7d;
+    background: none;
+  }
+
+  /* Custom dropdown styling */
+  .styled-search-select {
+    background-color: #1e1e1e;
+    border: 1px solid #555;
+    color: #fff;
+    border-radius: 2rem;
+    padding: 0.4rem 1rem 0.4rem 2.25rem;
+    font-size: 0.95rem;
+    height: 40px;
+    width: 100%;
+    box-shadow: 0 0 8px rgba(56, 239, 125, 0.15);
+  }
+
+  /* Search icon inside the input */
+  .search-icon-inside {
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    transform: translateY(-50%);
+    color: #38ef7d;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Add Trip button styling */
+  .select2-container--default .select2-selection--single {
+    background-color: #1e1e1e;
+    border: 1px solid #555;
+    height: 40px;
+    border-radius: 2rem;
+    display: flex;
+    align-items: center;
+    padding-left: 2.25rem;
+    padding-right: 2rem;
+    color: #fff;
+    box-shadow: 0 0 8px rgba(56, 239, 125, 0.15);
+    transition: all 0.3s ease;
+  }
+
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #fff;
+    line-height: 40px;
+    padding-left: 0;
+  }
+
+  .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 40px;
+    top: 0;
+    right: 10px;
+  }
+
+  .select2-container--default .select2-dropdown {
+    background-color: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 10px;
+    box-shadow: 0 6px 16px rgba(0, 255, 170, 0.1);
+    padding: 0.25rem 0;
+    z-index: 9999;
+    font-size: 0.95rem;
+  }
+
+  .select2-container--default .select2-results__option {
+    padding: 0.6rem 1rem;
+    color: #eaeaea;
+    background-color: transparent;
+    transition: background 0.2s ease, color 0.2s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  .select2-container--default .select2-results__option:last-child {
+    border-bottom: none;
+  }
+
+  .select2-container--default .select2-results__option--highlighted {
+    background: linear-gradient(to right, #38ef7d, #11998e);
+    color: #000;
+    font-weight: 600;
+  }
+
+  /* Updated Button Styling to Match Trips Page */
+  .btn-add-trip {
+    background: linear-gradient(to right, #38ef7d, #11998e);
+    border: none;
+    color: #000000;
+    font-weight: 600;
+    padding: 0.5rem 1.2rem;
+    border-radius: 2rem;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 8px rgba(56, 239, 125, 0.15);
+    display: flex;
+    align-items: center;
+  }
+
+  .btn-add-trip:hover {
+    background: linear-gradient(to right, #11998e, #38ef7d);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(56, 239, 125, 0.3);
+    color: #000000;
+  }
+
+  .btn-add-trip i {
+    font-size: 1.1rem;
+  }
+</style>
+
+<script>
+  // Setup Mapbox access token
+  mapboxgl.accessToken = 'pk.eyJ1IjoiY2hhbmRsZXJmYXJuc3dvcnRoIiwiYSI6ImNtOTlxYzlvZzBncXgydnBvNTNidDQ4ZjEifQ.eS8dzvYBlDFE8WJhgGR3Xg';
+
+  // parse trips data from backend
+  const trips = {{{json trips}}};
+
+  // list of UN recognized countries
+  const countries = [
+  { name: "Afghanistan", code: "🇦🇫" },
+  { name: "Albania", code: "🇦🇱" },
+  { name: "Algeria", code: "🇩🇿" },
+  { name: "Andorra", code: "🇦🇩" },
+  { name: "Angola", code: "🇦🇴" },
+  { name: "Argentina", code: "🇦🇷" },
+  { name: "Armenia", code: "🇦🇲" },
+  { name: "Australia", code: "🇦🇺" },
+  { name: "Austria", code: "🇦🇹" },
+  { name: "Azerbaijan", code: "🇦🇿" },
+  { name: "Bahamas", code: "🇧🇸" },
+  { name: "Bahrain", code: "🇧🇭" },
+  { name: "Bangladesh", code: "🇧🇩" },
+  { name: "Barbados", code: "🇧🇧" },
+  { name: "Belarus", code: "🇧🇾" },
+  { name: "Belgium", code: "🇧🇪" },
+  { name: "Belize", code: "🇧🇿" },
+  { name: "Benin", code: "🇧🇯" },
+  { name: "Bhutan", code: "🇧🇹" },
+  { name: "Bolivia", code: "🇧🇴" },
+  { name: "Bosnia and Herzegovina", code: "🇧🇦" },
+  { name: "Botswana", code: "🇧🇼" },
+  { name: "Brazil", code: "🇧🇷" },
+  { name: "Brunei", code: "🇧🇳" },
+  { name: "Bulgaria", code: "🇧🇬" },
+  { name: "Burkina Faso", code: "🇧🇫" },
+  { name: "Burundi", code: "🇧🇮" },
+  { name: "Cambodia", code: "🇰🇭" },
+  { name: "Cameroon", code: "🇨🇲" },
+  { name: "Canada", code: "🇨🇦" },
+  { name: "Cape Verde", code: "🇨🇻" },
+  { name: "Central African Republic", code: "🇨🇫" },
+  { name: "Chad", code: "🇹🇩" },
+  { name: "Chile", code: "🇨🇱" },
+  { name: "China", code: "🇨🇳" },
+  { name: "Colombia", code: "🇨🇴" },
+  { name: "Comoros", code: "🇰🇲" },
+  { name: "Costa Rica", code: "🇨🇷" },
+  { name: "Croatia", code: "🇭🇷" },
+  { name: "Cuba", code: "🇨🇺" },
+  { name: "Cyprus", code: "🇨🇾" },
+  { name: "Czech Republic", code: "🇨🇿" },
+  { name: "Denmark", code: "🇩🇰" },
+  { name: "Dominican Republic", code: "🇩🇴" },
+  { name: "Ecuador", code: "🇪🇨" },
+  { name: "Egypt", code: "🇪🇬" },
+  { name: "El Salvador", code: "🇸🇻" },
+  { name: "Estonia", code: "🇪🇪" },
+  { name: "Ethiopia", code: "🇪🇹" },
+  { name: "Fiji", code: "🇫🇯" },
+  { name: "Finland", code: "🇫🇮" },
+  { name: "France", code: "🇫🇷" },
+  { name: "Gabon", code: "🇬🇦" },
+  { name: "Gambia", code: "🇬🇲" },
+  { name: "Georgia", code: "🇬🇪" },
+  { name: "Germany", code: "🇩🇪" },
+  { name: "Ghana", code: "🇬🇭" },
+  { name: "Greece", code: "🇬🇷" },
+  { name: "Guatemala", code: "🇬🇹" },
+  { name: "Honduras", code: "🇭🇳" },
+  { name: "Hungary", code: "🇭🇺" },
+  { name: "Iceland", code: "🇮🇸" },
+  { name: "India", code: "🇮🇳" },
+  { name: "Indonesia", code: "🇮🇩" },
+  { name: "Iran", code: "🇮🇷" },
+  { name: "Iraq", code: "🇮🇶" },
+  { name: "Ireland", code: "🇮🇪" },
+  { name: "Israel", code: "🇮🇱" },
+  { name: "Italy", code: "🇮🇹" },
+  { name: "Jamaica", code: "🇯🇲" },
+  { name: "Japan", code: "🇯🇵" },
+  { name: "Jordan", code: "🇯🇴" },
+  { name: "Kazakhstan", code: "🇰🇿" },
+  { name: "Kenya", code: "🇰🇪" },
+  { name: "Kuwait", code: "🇰🇼" },
+  { name: "Kyrgyzstan", code: "🇰🇬" },
+  { name: "Laos", code: "🇱🇦" },
+  { name: "Latvia", code: "🇱🇻" },
+  { name: "Lebanon", code: "🇱🇧" },
+  { name: "Liberia", code: "🇱🇷" },
+  { name: "Libya", code: "🇱🇾" },
+  { name: "Lithuania", code: "🇱🇹" },
+  { name: "Luxembourg", code: "🇱🇺" },
+  { name: "Madagascar", code: "🇲🇬" },
+  { name: "Malawi", code: "🇲🇼" },
+  { name: "Malaysia", code: "🇲🇾" },
+  { name: "Maldives", code: "🇲🇻" },
+  { name: "Mali", code: "🇲🇱" },
+  { name: "Malta", code: "🇲🇹" },
+  { name: "Mauritania", code: "🇲🇷" },
+  { name: "Mexico", code: "🇲🇽" },
+  { name: "Moldova", code: "🇲🇩" },
+  { name: "Monaco", code: "🇲🇨" },
+  { name: "Mongolia", code: "🇲🇳" },
+  { name: "Montenegro", code: "🇲🇪" },
+  { name: "Morocco", code: "🇲🇦" },
+  { name: "Mozambique", code: "🇲🇿" },
+  { name: "Myanmar", code: "🇲🇲" },
+  { name: "Namibia", code: "🇳🇦" },
+  { name: "Nepal", code: "🇳🇵" },
+  { name: "Netherlands", code: "🇳🇱" },
+  { name: "New Zealand", code: "🇳🇿" },
+  { name: "Nicaragua", code: "🇳🇮" },
+  { name: "Niger", code: "🇳🇪" },
+  { name: "Nigeria", code: "🇳🇬" },
+  { name: "North Korea", code: "🇰🇵" },
+  { name: "North Macedonia", code: "🇲🇰" },
+  { name: "Norway", code: "🇳🇴" },
+  { name: "Oman", code: "🇴🇲" },
+  { name: "Pakistan", code: "🇵🇰" },
+  { name: "Palestine", code: "🇵🇸" },
+  { name: "Panama", code: "🇵🇦" },
+  { name: "Paraguay", code: "🇵🇾" },
+  { name: "Peru", code: "🇵🇪" },
+  { name: "Philippines", code: "🇵🇭" },
+  { name: "Poland", code: "🇵🇱" },
+  { name: "Portugal", code: "🇵🇹" },
+  { name: "Qatar", code: "🇶🇦" },
+  { name: "Romania", code: "🇷🇴" },
+  { name: "Russia", code: "🇷🇺" },
+  { name: "Rwanda", code: "🇷🇼" },
+  { name: "Saudi Arabia", code: "🇸🇦" },
+  { name: "Senegal", code: "🇸🇳" },
+  { name: "Serbia", code: "🇷🇸" },
+  { name: "Singapore", code: "🇸🇬" },
+  { name: "Slovakia", code: "🇸🇰" },
+  { name: "Slovenia", code: "🇸🇮" },
+  { name: "Somalia", code: "🇸🇴" },
+  { name: "South Africa", code: "🇿🇦" },
+  { name: "South Korea", code: "🇰🇷" },
+  { name: "South Sudan", code: "🇸🇸" },
+  { name: "Sri Lanka", code: "🇱🇰" },
+  { name: "Sudan", code: "🇸🇩" },
+  { name: "Sweden", code: "🇸🇪" },
+  { name: "Switzerland", code: "🇨🇭" },
+  { name: "Syria", code: "🇸🇾" },
+  { name: "Taiwan", code: "🇹🇼" },
+  { name: "Tajikistan", code: "🇹🇯" },
+  { name: "Tanzania", code: "🇹🇿" },
+  { name: "Thailand", code: "🇹🇭" },
+  { name: "Tunisia", code: "🇹🇳" },
+  { name: "Turkey", code: "🇹🇷" },
+  { name: "Turkmenistan", code: "🇹🇲" },
+  { name: "Uganda", code: "🇺🇬" },
+  { name: "Ukraine", code: "🇺🇦" },
+  { name: "United Arab Emirates", code: "🇦🇪" },
+  { name: "United Kingdom", code: "🇬🇧" },
+  { name: "United States", code: "🇺🇸" },
+  { name: "Uruguay", code: "🇺🇾" },
+  { name: "Uzbekistan", code: "🇺🇿" },
+  { name: "Venezuela", code: "🇻🇪" },
+  { name: "Vietnam", code: "🇻🇳" },
+  { name: "Yemen", code: "🇾🇪" },
+  { name: "Zambia", code: "🇿🇲" },
+  { name: "Zimbabwe", code: "🇿🇼" }
+];
+
+  // Create the Mapbox map
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/dark-v10',
+    projection: 'globe',
+    center: [0, 20],
+    zoom: 1.3,
+    maxZoom: 8,
+    minZoom: 0.8,
+    fadeDuration: 0,
+    renderWorldCopies: false,
+    attributionControl: false,
+    preserveDrawingBuffer: false,
+    antialias: false
+  });
+
+  // Cache to store country geolocation
+  const geocodeCache = {};
+  
+  // Set map fog and light for better performance
+  map.on('style.load', () => {
+    map.setFog({
+      color: 'rgb(20, 20, 30)', 
+      'high-color': 'rgb(20, 20, 30)',
+      'horizon-blend': 0.1,
+      'space-color': 'rgb(5, 5, 10)',
+      'star-intensity': 0.2
+    });
+    
+    map.setTerrain(null);
+    
+    map.setLight({
+      intensity: 0.2,
+      color: "#ffffff",
+      anchor: "viewport"
+    });
+    
+    setTimeout(() => renderTripMarkers(), 500);
+  });
+
+  // Get coordinates for a country
+  const geocodeCountry = async (country) => {
+    if (geocodeCache[country]) return geocodeCache[country];
+    
+    const url = `https://nominatim.openstreetmap.org/search?country=${encodeURIComponent(country)}&format=json&limit=1`;
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.length > 0) {
+        const coords = [parseFloat(data[0].lon), parseFloat(data[0].lat)];
+        geocodeCache[country] = coords; // Save to cache
+        return coords;
+      }
+    } catch (err) {
+      console.error("Geocoding failed:", err);
+    }
+    return null;
+  };
+
+  // Render markers for each trip
+  async function renderTripMarkers() {
+    const markers = [];
+    const fragment = document.createDocumentFragment();
+    
+    for (const trip of trips) {
+      if (!trip.image_path) continue;
+      
+      const locationName = trip.country_name || trip.location;
+      const coords = await geocodeCountry(locationName);
+      
+      if (coords) {
+        const el = document.createElement('div');
+        el.className = 'trip-marker';
+        el.setAttribute('data-title', trip.title || 'My Trip');
+        el.setAttribute('data-location', trip.location + (trip.country_name ? `, ${trip.country_name}` : ''));
+        el.setAttribute('data-lng', coords[0]);
+        el.setAttribute('data-lat', coords[1]);
+        
+        el.style.backgroundImage = `url('${trip.image_path}')`;
+        
+        fragment.appendChild(el);
+        markers.push({
+          element: el,
+          coords: coords,
+          title: trip.title || 'My Trip',
+          location: trip.location + (trip.country_name ? `, ${trip.country_name}` : '')
+        });
+      }
+    }
+    
+    // Add markers to map and setup popup on click
+    markers.forEach(marker => {
+      const mapMarker = new mapboxgl.Marker(marker.element)
+        .setLngLat(marker.coords)
+        .addTo(map);
+      
+      marker.element.addEventListener('click', () => {
+        const popup = new mapboxgl.Popup({ 
+          offset: 25,
+          closeButton: true,
+          closeOnClick: true,
+          maxWidth: '180px'
+        }).setHTML(`
+          <div>${marker.title}</div>
+          <div style="color: #38ef7d; font-size: 0.9rem; margin-top: 4px;">
+            ${marker.location}
+          </div>
+        `);
+        
+        mapMarker.setPopup(popup);
+        mapMarker.togglePopup();
+        
+        map.flyTo({
+          center: marker.coords,
+          zoom: 4,
+          speed: 0.8,
+          curve: 0.8,
+          essential: true
+        });
+      });
+    });
+  }
+
+  // Setup country dropdown using Select2
+  document.addEventListener("DOMContentLoaded", () => {
+    const $select = $('#countrySelect');
+    countries.forEach(c => {
+      $select.append(new Option(c.name, c.name));
+    });
+
+    $select.select2({
+      placeholder: "Search for a country...",
+      allowClear: true,
+      width: 'resolve',
+      templateResult: (state) => {
+        if (!state.id) return state.text;
+        const flag = countries.find(c => c.name === state.id)?.code || '';
+        return $('<span>' + flag + ' ' + state.text + '</span>');
+      },
+      templateSelection: (state) => {
+        const flag = countries.find(c => c.name === state.id)?.code || '';
+        return $('<span>' + flag + ' ' + state.text + '</span>');
+      }
+    });
+
+    // Fly to selected country
+    $select.on('change', async function () {
+      const selected = $(this).val();
+      if (selected) {
+        const coords = await geocodeCountry(selected);
+        if (coords) {
+          map.flyTo({ center: coords, zoom: 4.2, speed: 1.3, curve: 1.1 });
+        } else {
+          alert("Couldn't find that location.");
+        }
+      }
+    });
+  });
+</script>

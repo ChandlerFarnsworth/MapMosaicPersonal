@@ -1,0 +1,33 @@
+Team 6 Meeting Minutes
+Lab Section 110
+Project Week 1
+
+Date: 3/18/2025
+
+Attendees:
+Jevan Wiltz 
+Treyanna Brown 
+Chandler Farnsworth 
+Ben Grumbles 
+Juliana Garcia-Gallo 
+
+*Directives*
+  - Finish creating agenda on Asana with deadlines
+  - Establish a working model of the basic login, registration, and home page of the website
+  - Finish the wireframe functionality
+  - Dockerfile make or copy directory image over as done in labs from Node to ensure docker-compose works
+  - 
+  - 
+
+*Decisions Made*
+  - Going to attempt Dockerfile creation then pull from the labs a working directory as needed
+
+*Alternative Goals*
+  - N/A
+ 
+
+*Follow-Ups*
+  - N/A
+
+*Miscellaneous*
+  - N/A
