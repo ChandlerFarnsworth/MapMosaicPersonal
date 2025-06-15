@@ -1,22 +1,20 @@
 # Use the official Node.js image
 FROM node:18
 
-# Set the working directory inside the container
+# Set working directory inside container
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
+# Copy package.json and lockfile from ProjectSourceCode
+COPY ProjectSourceCode/package*.json ./
 
 # Install dependencies
 RUN npm install
 
-RUN npm install multer
+# Copy the rest of the application code
+COPY ProjectSourceCode/ ./
 
-# Copy the rest of the app's code
-COPY . .
-
-# Expose port 3000 for the app
+# Expose the port your app listens on
 EXPOSE 5000
 
-# Command to start the app
+# Start the app
 CMD ["npm", "start"]
