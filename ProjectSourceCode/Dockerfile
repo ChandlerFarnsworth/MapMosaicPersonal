@@ -4,13 +4,13 @@ FROM node:18
 # Set working directory inside container
 WORKDIR /usr/src/app
 
-# Copy package.json and lockfile (they're in the current directory now)
+# Copy package.json and lockfile
 COPY package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy the rest of the application code (current directory)
+# Copy the rest of the application code
 COPY . .
 
 # Expose the port your app listens on
