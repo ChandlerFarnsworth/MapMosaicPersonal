@@ -14,7 +14,7 @@ RUN npm install
 COPY ProjectSourceCode/ ./
 
 # Expose the port your app listens on
-EXPOSE 5000
+EXPOSE 3000
 
 # Start the app
 CMD ["npm", "start"]
